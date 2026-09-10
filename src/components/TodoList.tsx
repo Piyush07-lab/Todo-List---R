@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, Fragment } from 'react';
 import { TodoItem, PriorityLevel } from '../types/todo';
 import TodoItems from './TodoItems';
-import { ChevronDownIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, InformationCircleIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { Dialog, Transition } from '@headlessui/react';
 
 export type GroupByOption = 'none' | 'priority' | 'category' | 'date';
@@ -21,6 +21,7 @@ const TodoList: React.FC<TodoListProps> = ({ items, setItems, deleteItem, toggle
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
   const [isMobileInfoOpen, setIsMobileInfoOpen] = useState(false);
+  const [isMobileHistoryOpen, setIsMobileHistoryOpen] = useState(false);
 
   const [groupBy, setGroupBy] = useState<GroupByOption>('none');
   const [filterPriority, setFilterPriority] = useState<'all' | 1 | 2 | 3 | 4 | 5>('all');
@@ -84,6 +85,10 @@ const TodoList: React.FC<TodoListProps> = ({ items, setItems, deleteItem, toggle
       return b.createdAt - a.createdAt;
     });
 
+  const historyItems = items
+    .filter(item => item.status)
+    .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+
   return (
     <>
       <div className='w-full max-w-md h-[80vh] flex flex-col bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl relative overflow-hidden'>
@@ -92,12 +97,22 @@ const TodoList: React.FC<TodoListProps> = ({ items, setItems, deleteItem, toggle
         <div className="p-6 pb-4 bg-white/5 shrink-0">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-bold text-white tracking-wide">Tasks</h1>
-            <button 
-              className="md:hidden text-white/70 hover:text-white transition-colors"
-              onClick={() => setIsMobileInfoOpen(true)}
-            >
-              <InformationCircleIcon className="w-7 h-7" />
-            </button>
+            <div className="flex items-center gap-3 xl:hidden">
+              <button 
+                className="text-white/70 hover:text-white transition-colors"
+                onClick={() => setIsMobileHistoryOpen(true)}
+                title="History"
+              >
+                <ClockIcon className="w-7 h-7" />
+              </button>
+              <button 
+                className="text-white/70 hover:text-white transition-colors"
+                onClick={() => setIsMobileInfoOpen(true)}
+                title="Smart Syntax"
+              >
+                <InformationCircleIcon className="w-7 h-7" />
+              </button>
+            </div>
           </div>
           
           <form onSubmit={addItem} className='flex gap-2'>
@@ -182,7 +197,7 @@ const TodoList: React.FC<TodoListProps> = ({ items, setItems, deleteItem, toggle
 
       {/* Mobile Info Modal */}
       <Transition appear show={isMobileInfoOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50 md:hidden" onClose={() => setIsMobileInfoOpen(false)}>
+        <Dialog as="div" className="relative z-50 xl:hidden" onClose={() => setIsMobileInfoOpen(false)}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -229,6 +244,70 @@ const TodoList: React.FC<TodoListProps> = ({ items, setItems, deleteItem, toggle
                       onClick={() => setIsMobileInfoOpen(false)}
                     >
                       Got it, thanks!
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
+
+      {/* Mobile History Modal */}
+      <Transition appear show={isMobileHistoryOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50 xl:hidden" onClose={() => setIsMobileHistoryOpen(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-sm max-h-[80vh] flex flex-col transform overflow-hidden rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-white/10 p-6 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Title as="h3" className="text-lg font-bold leading-6 text-white mb-4 uppercase tracking-widest text-center border-b border-white/10 pb-4">
+                    History
+                  </Dialog.Title>
+                  
+                  <div className="flex-1 overflow-y-auto no-scrollbar relative min-h-[50vh]">
+                    {historyItems.length === 0 ? (
+                      <div className="h-full flex items-center justify-center text-white/50 text-sm">
+                        No completed tasks.
+                      </div>
+                    ) : (
+                      <TodoItems 
+                        entries={historyItems} 
+                        onDelete={deleteItem} 
+                        onToggleComplete={toggleComplete}
+                        onUpdatePriority={updatePriority}
+                        onUpdateCategory={updateCategory}
+                        isHistory={true}
+                      />
+                    )}
+                  </div>
+
+                  <div className="mt-6 shrink-0">
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-md border border-transparent bg-indigo-500/20 px-4 py-2 text-sm font-medium text-indigo-300 hover:bg-indigo-500/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 w-full"
+                      onClick={() => setIsMobileHistoryOpen(false)}
+                    >
+                      Close
                     </button>
                   </div>
                 </Dialog.Panel>
